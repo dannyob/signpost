@@ -4,10 +4,10 @@
    Licensed under the MIT license: https://opensource.org/licenses/MIT
 */
 
-#define GREETING "SIGNPOST V1.5UL"
+#define GREETING "SIGNPOST V2.0UL"
 
 // Lisp Library
-const char LispLibrary[] PROGMEM = "(prin1 'HELLO)";
+const char LispLibrary[] PROGMEM = "(with-gfx (str) (princ \"" GREETING "\" str))";
 
 // Compile options
 
@@ -15,7 +15,7 @@ const char LispLibrary[] PROGMEM = "(prin1 'HELLO)";
 #define printfreespace
 // #define printgcs
 // #define sdcardsupport
-// #define gfxsupport
+#define gfxsupport
 #define lisplibrary
 // #define lineeditor
 // #define vt100
@@ -158,11 +158,6 @@ Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, MOSI, SCK, TFT_RST);
 // SIGNPOST LIBRARIES
 
 #include <NeoPixelBus.h>
-#include <ESPAsyncTCP.h>
-#include "SyncClient.h"
-#include <ESPAsyncWebSrv.h>
-#include <AsyncElegantOTA.h>
-
 #include "secret.h"
 
 
@@ -1748,8 +1743,9 @@ inline int SDread () {
 }
 #endif
 
-SyncClient client;
-/* WiFiServer server(81); */
+WiFiClient client;
+WiFiServer server(80);
+
 
 inline int WiFiread () {
   if (LastChar) {
@@ -5761,7 +5757,6 @@ void processkey (char c) {
 }
 
 int gserial () {
-  
   if (LastChar) {
     char temp = LastChar;
     LastChar = 0;
@@ -6030,9 +6025,6 @@ void loop () {
   client.stop();
   repl(NULL);
 }
-
-
-AsyncWebServer signpost_server(80);
 
 struct chlist {
   char letter;
@@ -6435,8 +6427,7 @@ const uint8_t font_images[] = {
 
 
 const uint16_t PixelCount = 512; // make sure to set this to the number of pixels in your strip
-const uint8_t PixelPin = 2;  // make sure to set this to the correct pin, ignored for Esp8266
-                             // NOTE: On my ESP8266 NODEMCU the correct pin is marked RX -- green wire attaches to this, white to GND, red to 3.3V 
+const uint8_t PixelPin = 17;  // make sure to set this to the correct pin, ignored for Esp8266
 const RgbColor DarkNight(HtmlColor(0x000000));
 const RgbColor CylonEyeColor(HtmlColor(0x0f0000));
 const RgbColor DimCylon(HtmlColor(0x080000));
@@ -6448,7 +6439,7 @@ const uint8_t PanelHeight = 8;
 
 // NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
 // for esp8266 omit the pin
-NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount);
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
 
 // NeoTopology<ColumnMajorAlternatingLayout> topo(PanelWidth, PanelHeight);
 // NeoTopology<ColumnMajorAlternatingLayout> topo(PanelWidth / 2, PanelHeight);
@@ -6522,7 +6513,7 @@ void setup()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-
+/*
   signpost_server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", GREETING);
   });
@@ -6555,7 +6546,7 @@ void setup()
 
   AsyncElegantOTA.begin(&signpost_server);    // Start ElegantOTA
   signpost_server.begin();
-  Serial.println("HTTP server started"); 
+  Serial.println("HTTP server started");  */
 
   // Strip starts!
   strip.Begin();
