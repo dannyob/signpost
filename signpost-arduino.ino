@@ -5,6 +5,9 @@
 */
 
 #define GREETING "SIGNPOST V2.0UL"
+#include "ESPTelnetStream.h"
+
+ESPTelnetStream telnet;
 
 // Lisp Library
 const char LispLibrary[] PROGMEM = "(with-gfx (str) (princ \"" GREETING "\" str))";
@@ -5979,6 +5982,7 @@ void ulisp_setup () {
 
 void repl (object *env) {
   for (;;) {
+    other_loops();
     randomSeed(micros());
     gc(NULL, env);
     #if defined (printfreespace)
@@ -6496,6 +6500,13 @@ void display_text(const char *s)
   strip.Show();
 }
 
+
+
+void other_loops()
+{
+  telnet.loop();
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -6513,40 +6524,12 @@ void setup()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-/*
-  signpost_server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", GREETING);
-  });
-
-  signpost_server.on("/screen/", HTTP_POST, [](AsyncWebServerRequest *request) {
-    int params = request->params();
-    const char *output = "NOWAY";
-    for (int i = 0; i < params; i++)
-    {
-      AsyncWebParameter *p = request->getParam(i);
-      if (p->isFile())
-      { //p->isPost() is also true
-        Serial.printf("FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
-      }
-      else if (p->isPost())
-      {
-        Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-      }
-      else
-      {
-        Serial.printf("GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
-      }
-      if (strcmp(p->name().c_str(), "text") == 0 ) {
-        output = p->value().c_str();
-      }
+    Serial.print("Telnet.begin: ");
+  if(telnet.begin()) {
+    Serial.println("Successful");
+  } else {
+    Serial.println("Failed");
   }
-      display_text(output);
-      request->send(200, "text/plain", output);
-  });
-
-  AsyncElegantOTA.begin(&signpost_server);    // Start ElegantOTA
-  signpost_server.begin();
-  Serial.println("HTTP server started");  */
 
   // Strip starts!
   strip.Begin();
@@ -6558,11 +6541,3 @@ void setup()
   // ulisp starts!
    ulisp_setup();  
 }
-
-/*
-void loop()
-{
-  // ulisp_loop();
-}
-
-*/
