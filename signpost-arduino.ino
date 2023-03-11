@@ -40,11 +40,13 @@ const char LispLibrary[] PROGMEM = "(with-gfx (str) (princ \"" GREETING "\" str)
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 #if defined(ARDUINO_ESP32_DEV)
-Adafruit_ST7789 tft = Adafruit_ST7789(5, 16, 19, 18);
+Adafruit_ST7789 tft_gfx  = Adafruit_ST7789(5, 16, 19, 18);
 #define TFT_BACKLITE 4
 #else
-Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, MOSI, SCK, TFT_RST);
+Adafruit_ST7789 tft_gfx = Adafruit_ST7789(TFT_CS, TFT_DC, MOSI, SCK, TFT_RST);
 #endif
+Adafruit_GFX *tft = &tft_gfx;
+GFXcanvas16 led_gfx = GFXcanvas16(32,32);
 #endif
 
 #if defined(sdcardsupport)
@@ -283,7 +285,7 @@ K_INPUT, K_INPUT_PULLUP, K_OUTPUT,
 #elif defined(ESP32)
 K_INPUT, K_INPUT_PULLUP, K_INPUT_PULLDOWN, K_OUTPUT,
 #endif
-USERFUNCTIONS, LEDTEXT, ENDFUNCTIONS, SET_SIZE = INT_MAX };
+USERFUNCTIONS, LEDTEXT, WITHLED, ENDFUNCTIONS, SET_SIZE = INT_MAX };
 
 // Global variables
 
@@ -1798,7 +1800,7 @@ inline void WiFiwrite (char c) { client.write(c); }
 inline void SDwrite (char c) { SDpfile.write(c); }
 #endif
 #if defined(gfxsupport)
-inline void gfxwrite (char c) { tft.write(c); }
+inline void gfxwrite (char c) { tft->write(c); }
 #endif
 
 pfun_t pstreamfun (object *args) {
@@ -1949,10 +1951,10 @@ void superprint (object *form, int lm, pfun_t pfun) {
   else supersub(form, lm + PPINDENT, 1, pfun);
 }
 
-const int ppspecials = 20;
+const int ppspecials = 21;
 const char ppspecial[ppspecials] PROGMEM =
   { DOTIMES, DOLIST, IF, SETQ, TEE, LET, LETSTAR, LAMBDA, WHEN, UNLESS, WITHI2C, WITHSERIAL, WITHSPI, WITHSDCARD, FORMILLIS, 
-    WITHOUTPUTTOSTRING,  DEFVAR, CASE, WITHGFX, WITHCLIENT };
+    WITHOUTPUTTOSTRING,  DEFVAR, CASE, WITHGFX, WITHCLIENT, WITHLED };
 
 void supersub (object *form, int lm, int super, pfun_t pfun) {
   int special = 0, separate = 1;
@@ -2472,7 +2474,7 @@ object *sp_withclient (object *args, object *env) {
     /* client = server.available();
     if (!client) return nil;
     n = 2; */
-    return nil; // TODO Tie into our async server
+    return nil; // TODO Tie into our asyobject *sp_withclient (object *args, object *env)nc server
   } else {
     object *address = eval(first(params), env);
     object *port = eval(second(params), env);
@@ -4038,7 +4040,7 @@ object *fn_drawpixel (object *args, object *env) {
   #if defined(gfxsupport)
   uint16_t colour = COLOR_WHITE;
   if (cddr(args) != NULL) colour = checkinteger(DRAWPIXEL, third(args));
-  tft.drawPixel(checkinteger(DRAWPIXEL, first(args)), checkinteger(DRAWPIXEL, second(args)), colour);
+  tft->drawPixel(checkinteger(DRAWPIXEL, first(args)), checkinteger(DRAWPIXEL, second(args)), colour);
   #else
   (void) args;
   #endif
@@ -4051,7 +4053,7 @@ object *fn_drawline (object *args, object *env) {
   uint16_t params[4], colour = COLOR_WHITE;
   for (int i=0; i<4; i++) { params[i] = checkinteger(DRAWLINE, car(args)); args = cdr(args); }
   if (args != NULL) colour = checkinteger(DRAWLINE, car(args));
-  tft.drawLine(params[0], params[1], params[2], params[3], colour);
+  tft->drawLine(params[0], params[1], params[2], params[3], colour);
   #else
   (void) args;
   #endif
@@ -4064,7 +4066,7 @@ object *fn_drawrect (object *args, object *env) {
   uint16_t params[4], colour = COLOR_WHITE;
   for (int i=0; i<4; i++) { params[i] = checkinteger(DRAWRECT, car(args)); args = cdr(args); }
   if (args != NULL) colour = checkinteger(DRAWRECT, car(args));
-  tft.drawRect(params[0], params[1], params[2], params[3], colour);
+  tft->drawRect(params[0], params[1], params[2], params[3], colour);
   #else
   (void) args;
   #endif
@@ -4077,7 +4079,7 @@ object *fn_fillrect (object *args, object *env) {
   uint16_t params[4], colour = COLOR_WHITE;
   for (int i=0; i<4; i++) { params[i] = checkinteger(FILLRECT, car(args)); args = cdr(args); }
   if (args != NULL) colour = checkinteger(FILLRECT, car(args));
-  tft.fillRect(params[0], params[1], params[2], params[3], colour);
+  tft->fillRect(params[0], params[1], params[2], params[3], colour);
   #else
   (void) args;
   #endif
@@ -4090,7 +4092,7 @@ object *fn_drawcircle (object *args, object *env) {
   uint16_t params[3], colour = COLOR_WHITE;
   for (int i=0; i<3; i++) { params[i] = checkinteger(DRAWCIRCLE, car(args)); args = cdr(args); }
   if (args != NULL) colour = checkinteger(DRAWCIRCLE, car(args));
-  tft.drawCircle(params[0], params[1], params[2], colour);
+  tft->drawCircle(params[0], params[1], params[2], colour);
   #else
   (void) args;
   #endif
@@ -4103,7 +4105,7 @@ object *fn_fillcircle (object *args, object *env) {
   uint16_t params[3], colour = COLOR_WHITE;
   for (int i=0; i<3; i++) { params[i] = checkinteger(FILLCIRCLE, car(args)); args = cdr(args); }
   if (args != NULL) colour = checkinteger(FILLCIRCLE, car(args));
-  tft.fillCircle(params[0], params[1], params[2], colour);
+  tft->fillCircle(params[0], params[1], params[2], colour);
   #else
   (void) args;
   #endif
@@ -4116,7 +4118,7 @@ object *fn_drawroundrect (object *args, object *env) {
   uint16_t params[5], colour = COLOR_WHITE;
   for (int i=0; i<5; i++) { params[i] = checkinteger(DRAWROUNDRECT, car(args)); args = cdr(args); }
   if (args != NULL) colour = checkinteger(DRAWROUNDRECT, car(args));
-  tft.drawRoundRect(params[0], params[1], params[2], params[3], params[4], colour);
+  tft->drawRoundRect(params[0], params[1], params[2], params[3], params[4], colour);
   #else
   (void) args;
   #endif
@@ -4129,7 +4131,7 @@ object *fn_fillroundrect (object *args, object *env) {
   uint16_t params[5], colour = COLOR_WHITE;
   for (int i=0; i<5; i++) { params[i] = checkinteger(FILLROUNDRECT, car(args)); args = cdr(args); }
   if (args != NULL) colour = checkinteger(FILLROUNDRECT, car(args));
-  tft.fillRoundRect(params[0], params[1], params[2], params[3], params[4], colour);
+  tft->fillRoundRect(params[0], params[1], params[2], params[3], params[4], colour);
   #else
   (void) args;
   #endif
@@ -4142,7 +4144,7 @@ object *fn_drawtriangle (object *args, object *env) {
   uint16_t params[6], colour = COLOR_WHITE;
   for (int i=0; i<6; i++) { params[i] = checkinteger(DRAWTRIANGLE, car(args)); args = cdr(args); }
   if (args != NULL) colour = checkinteger(DRAWTRIANGLE, car(args));
-  tft.drawTriangle(params[0], params[1], params[2], params[3], params[4], params[5], colour);
+  tft->drawTriangle(params[0], params[1], params[2], params[3], params[4], params[5], colour);
   #else
   (void) args;
   #endif
@@ -4155,7 +4157,7 @@ object *fn_filltriangle (object *args, object *env) {
   uint16_t params[6], colour = COLOR_WHITE;
   for (int i=0; i<6; i++) { params[i] = checkinteger(FILLTRIANGLE, car(args)); args = cdr(args); }
   if (args != NULL) colour = checkinteger(FILLTRIANGLE, car(args));
-  tft.fillTriangle(params[0], params[1], params[2], params[3], params[4], params[5], colour);
+  tft->fillTriangle(params[0], params[1], params[2], params[3], params[4], params[5], colour);
   #else
   (void) args;
   #endif
@@ -4176,7 +4178,7 @@ object *fn_drawchar (object *args, object *env) {
       if (more != NULL) size = checkinteger(DRAWCHAR, car(more));
     }
   }
-  tft.drawChar(checkinteger(DRAWCHAR, first(args)), checkinteger(DRAWCHAR, second(args)), checkchar(DRAWCHAR, third(args)),
+  tft->drawChar(checkinteger(DRAWCHAR, first(args)), checkinteger(DRAWCHAR, second(args)), checkchar(DRAWCHAR, third(args)),
     colour, bg, size);
   #else
   (void) args;
@@ -4187,7 +4189,7 @@ object *fn_drawchar (object *args, object *env) {
 object *fn_setcursor (object *args, object *env) {
   (void) env;
   #if defined(gfxsupport)
-  tft.setCursor(checkinteger(SETCURSOR, first(args)), checkinteger(SETCURSOR, second(args)));
+  tft->setCursor(checkinteger(SETCURSOR, first(args)), checkinteger(SETCURSOR, second(args)));
   #else
   (void) args;
   #endif
@@ -4197,8 +4199,8 @@ object *fn_setcursor (object *args, object *env) {
 object *fn_settextcolor (object *args, object *env) {
   (void) env;
   #if defined(gfxsupport)
-  if (cdr(args) != NULL) tft.setTextColor(checkinteger(SETTEXTCOLOR, first(args)), checkinteger(SETTEXTCOLOR, second(args)));
-  else tft.setTextColor(checkinteger(SETTEXTCOLOR, first(args)));
+  if (cdr(args) != NULL) tft->setTextColor(checkinteger(SETTEXTCOLOR, first(args)), checkinteger(SETTEXTCOLOR, second(args)));
+  else tft->setTextColor(checkinteger(SETTEXTCOLOR, first(args)));
   #else
   (void) args;
   #endif
@@ -4208,7 +4210,7 @@ object *fn_settextcolor (object *args, object *env) {
 object *fn_settextsize (object *args, object *env) {
   (void) env;
   #if defined(gfxsupport)
-  tft.setTextSize(checkinteger(SETTEXTSIZE, first(args)));
+  tft->setTextSize(checkinteger(SETTEXTSIZE, first(args)));
   #else
   (void) args;
   #endif
@@ -4218,7 +4220,7 @@ object *fn_settextsize (object *args, object *env) {
 object *fn_settextwrap (object *args, object *env) {
   (void) env;
   #if defined(gfxsupport)
-  tft.setTextWrap(first(args) != NULL);
+  tft->setTextWrap(first(args) != NULL);
   #else
   (void) args;
   #endif
@@ -4230,7 +4232,7 @@ object *fn_fillscreen (object *args, object *env) {
   #if defined(gfxsupport)
   uint16_t colour = COLOR_BLACK;
   if (args != NULL) colour = checkinteger(FILLSCREEN, first(args));
-  tft.fillScreen(colour);
+  tft->fillScreen(colour);
   #else
   (void) args;
   #endif
@@ -4240,7 +4242,7 @@ object *fn_fillscreen (object *args, object *env) {
 object *fn_setrotation (object *args, object *env) {
   (void) env;
   #if defined(gfxsupport)
-  tft.setRotation(checkinteger(SETROTATION, first(args)));
+  tft->setRotation(checkinteger(SETROTATION, first(args)));
   #else
   (void) args;
   #endif
@@ -4250,7 +4252,7 @@ object *fn_setrotation (object *args, object *env) {
 object *fn_invertdisplay (object *args, object *env) {
   (void) env;
   #if defined(gfxsupport)
-  tft.invertDisplay(first(args) != NULL);
+  tft->invertDisplay(first(args) != NULL);
   #else
   (void) args;
   #endif
@@ -4258,6 +4260,7 @@ object *fn_invertdisplay (object *args, object *env) {
 }
 
 // Insert your own function definitions here
+
 char *objtocstring (object *form, char *buffer, int buflen) {
   int index = 0;
   form = cdr(form);
@@ -4266,7 +4269,7 @@ char *objtocstring (object *form, char *buffer, int buflen) {
     for (int i=(sizeof(int)-1)*8; i>=0; i=i-8) {
       char ch = chars>>i & 0xFF;
       if (ch) {
-        if (index >= buflen-1) error2(LEDTEXT, PSTR("no room for string"));
+        if (index >= buflen-1) error2(MAKUNBOUND,"no room for string");
         buffer[index++] = ch;
       }
     }
@@ -4283,6 +4286,21 @@ object *fn_led_text (object *args, object *env) {
   display_text(objtocstring(first(args),buf,63));
   return nil;
 }
+
+object *sp_with_led (object *args, object *env) {
+#if defined(gfxsupport)
+  object *forms = first(args);
+  tft = &led_gfx;
+  object *result = eval(tf_progn(forms,env), env);
+  tft = &tft_gfx;
+  return result;
+#else
+  (void) args, (void) env;
+  error2(WITHGFX, PSTR("not supported"));
+  return nil;
+#endif
+}
+
 
 // Built-in symbol names
 const char string0[] PROGMEM = "nil";
@@ -4525,6 +4543,7 @@ const char string229[] PROGMEM = "";
 
 // Insert your own function names here
 const char string230[] PROGMEM = "led-text";
+const char string231[] PROGMEM = "with-led";
 
 // Documentation strings
 const char doc0[] PROGMEM = "nil\n"
@@ -5025,13 +5044,15 @@ const char doc217[] PROGMEM = "(set-text-wrap boolean)\n"
 const char doc218[] PROGMEM = "(fill-screen [colour])\n"
 "Fills or clears the screen with colour, default black.";
 const char doc219[] PROGMEM = "(set-rotation option)\n"
-"Sets the display orientation for subsequent graphics commands; values are 0, 1, 2, or 3.";
+"Sets the display orientation for subsequent graphics commhttps://archive.is/DJqhLands; values are 0, 1, 2, or 3.";
 const char doc220[] PROGMEM = "(invert-display boolean)\n"
 "Mirror-images the display.";
 
 // Insert your own function documentation here
 const char doc230[] PROGMEM = "(led-text string)\n"
 "Writes string to the NeoPixel LED matrix.";
+const char doc231[] PROGMEM = "(with-led form)\n"
+"Write gfx to the NeoPixel LED matrix";
 
 
 // Built-in symbol lookup table
@@ -5276,6 +5297,7 @@ const tbl_entry_t lookup_table[] PROGMEM = {
 
 // Insert your own table entries here
   { string230, fn_led_text, 0x11, doc230 },
+  { string231, sp_with_led, 0x11, doc231 },
 
 };
 
@@ -5995,15 +6017,15 @@ object *read (gfun_t gfun) {
 
 void initgfx () {
 #if defined(gfxsupport)
-  tft.init(135, 240);
+  tft_gfx.init(135, 240);
 #if defined(ARDUINO_ADAFRUIT_FEATHER_ESP32S2_TFT)
   pinMode(TFT_I2C_POWER, OUTPUT);
   digitalWrite(TFT_I2C_POWER, HIGH);
-  tft.setRotation(3);
+  tft_gfx.setRotation(3);
 #else
-  tft.setRotation(1);
+  tft_gfx.setRotation(1);
 #endif
-  tft.fillScreen(ST77XX_BLACK);
+  tft_gfx.fillScreen(ST77XX_BLACK);
   pinMode(TFT_BACKLITE, OUTPUT);
   digitalWrite(TFT_BACKLITE, HIGH);
 #endif
