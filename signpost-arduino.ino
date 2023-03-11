@@ -4,10 +4,7 @@
    Licensed under the MIT license: https://opensource.org/licenses/MIT
 */
 
-#define GREETING "SIGNPOST V2.0UL"
-#include "ESPTelnetStream.h"
-
-ESPTelnetStream telnet;
+#define GREETING "SIGNPOST V2.1ADUL"
 
 // Lisp Library
 const char LispLibrary[] PROGMEM = "(with-gfx (str) (princ \"" GREETING "\" str))";
@@ -163,6 +160,10 @@ Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, MOSI, SCK, TFT_RST);
 #include <NeoPixelBus.h>
 #include "secret.h"
 
+
+// Telnet Repl
+WiFiServer telnetServer(1958, 1);
+WiFiClient telnetClient;
 
 
 
@@ -5440,10 +5441,14 @@ object *eval (object *form, object *env) {
 
 // Print functions
 
-void pserial (char c) {
+void pserial(char c) {
   LastPrint = c;
   if (c == '\n') Serial.write('\r');
   Serial.write(c);
+  if (telnetConnected()) {
+    if (c == '\n') telnetClient.write('\r');
+    telnetClient.write(c);
+  }
 }
 
 const char ControlCodes[] PROGMEM = "Null\0SOH\0STX\0ETX\0EOT\0ENQ\0ACK\0Bell\0Backspace\0Tab\0Newline\0VT\0"
@@ -5759,7 +5764,7 @@ void processkey (char c) {
   return;
 }
 
-int gserial () {
+int gserial() {
   if (LastChar) {
     char temp = LastChar;
     LastChar = 0;
@@ -5767,7 +5772,8 @@ int gserial () {
   }
 #if defined(lineeditor)
   while (!KybdAvailable) {
-    while (!Serial.available());
+    while (!Serial.available())
+      ;
     char temp = Serial.read();
     processkey(temp);
   }
@@ -5777,9 +5783,19 @@ int gserial () {
   return '\n';
 #else
   unsigned long start = millis();
-  while (!Serial.available()) { delay(1); if (millis() - start > 1000) clrflag(NOECHO); }
+  while (!Serial.available()) {
+    delay(1);
+    if (millis() - start > 1000) clrflag(NOECHO);
+    if (telnetConnected() && (telnetClient.available() > 0)) {
+      char temp = telnetClient.read();
+      return temp;
+    }
+  }
   char temp = Serial.read();
-  if (temp != '\n' && !tstflag(NOECHO)) pserial(temp);
+  if (temp != '\n' && !tstflag(NOECHO)) {
+    pserial(temp);
+    if (telnetConnected() && telnetClient.available()) telnetClient.write(temp);
+  }
   return temp;
 #endif
 }
@@ -5968,9 +5984,31 @@ void initenv () {
   tee = bsymbol(TEE);
 }
 
-void ulisp_setup () {
+uint8_t telnetConnected() {
+  if (telnetServer.hasClient()) {
+    // If we are already connected to another computer,
+    // then reject the new connection. Otherwise accept
+    // the connection.
+    if (telnetClient.connected()) {
+      Serial.println("Connection rejected");
+      telnetServer.available().stop();
+    } else {
+      Serial.println("Connection accepted");
+      telnetClient = telnetServer.available();
+    }
+  }
+  return telnetClient.connected();
+}
+
+void inittelnet() {
+  Serial.print("Telnet server beginning: ");
+  telnetServer.begin();
+}
+
+void ulisp_setup() {
   int start = millis();
   while ((millis() - start) < 5000) { if (Serial) break; }
+  inittelnet();
   initworkspace();
   initenv();
   initsleep();
@@ -5982,7 +6020,6 @@ void ulisp_setup () {
 
 void repl (object *env) {
   for (;;) {
-    other_loops();
     randomSeed(micros());
     gc(NULL, env);
     #if defined (printfreespace)
@@ -6501,14 +6538,7 @@ void display_text(const char *s)
 }
 
 
-
-void other_loops()
-{
-  telnet.loop();
-}
-
-void setup()
-{
+void setup() {
   Serial.begin(115200);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -6524,20 +6554,13 @@ void setup()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-    Serial.print("Telnet.begin: ");
-  if(telnet.begin()) {
-    Serial.println("Successful");
-  } else {
-    Serial.println("Failed");
-  }
-
   // Strip starts!
   strip.Begin();
-  strip.ClearTo(DarkNight, 1, PixelCount-1);
+  strip.ClearTo(DarkNight, 1, PixelCount - 1);
   display_text(GREETING);
   strip.Show();
   Serial.println(GREETING);
 
   // ulisp starts!
-   ulisp_setup();  
+  ulisp_setup();
 }
