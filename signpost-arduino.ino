@@ -283,7 +283,7 @@ K_INPUT, K_INPUT_PULLUP, K_OUTPUT,
 #elif defined(ESP32)
 K_INPUT, K_INPUT_PULLUP, K_INPUT_PULLDOWN, K_OUTPUT,
 #endif
-USERFUNCTIONS, ENDFUNCTIONS, SET_SIZE = INT_MAX };
+USERFUNCTIONS, LEDTEXT, ENDFUNCTIONS, SET_SIZE = INT_MAX };
 
 // Global variables
 
@@ -4258,6 +4258,31 @@ object *fn_invertdisplay (object *args, object *env) {
 }
 
 // Insert your own function definitions here
+char *objtocstring (object *form, char *buffer, int buflen) {
+  int index = 0;
+  form = cdr(form);
+  while (form != NULL) {
+    int chars = form->integer;
+    for (int i=(sizeof(int)-1)*8; i>=0; i=i-8) {
+      char ch = chars>>i & 0xFF;
+      if (ch) {
+        if (index >= buflen-1) error2(LEDTEXT, PSTR("no room for string"));
+        buffer[index++] = ch;
+      }
+    }
+    form = car(form);
+  }
+  buffer[index] = '\0';
+  return buffer;
+}
+
+object *fn_led_text (object *args, object *env) {
+  char buf[64];
+  object *text = first(args);
+  if (!stringp(text)) error(LEDTEXT, notastring, text);
+  display_text(objtocstring(first(args),buf,63));
+  return nil;
+}
 
 // Built-in symbol names
 const char string0[] PROGMEM = "nil";
@@ -4499,6 +4524,7 @@ const char string229[] PROGMEM = "";
 #endif
 
 // Insert your own function names here
+const char string230[] PROGMEM = "led-text";
 
 // Documentation strings
 const char doc0[] PROGMEM = "nil\n"
@@ -5004,6 +5030,9 @@ const char doc220[] PROGMEM = "(invert-display boolean)\n"
 "Mirror-images the display.";
 
 // Insert your own function documentation here
+const char doc230[] PROGMEM = "(led-text string)\n"
+"Writes string to the NeoPixel LED matrix.";
+
 
 // Built-in symbol lookup table
 const tbl_entry_t lookup_table[] PROGMEM = {
@@ -5246,6 +5275,7 @@ const tbl_entry_t lookup_table[] PROGMEM = {
 #endif
 
 // Insert your own table entries here
+  { string230, fn_led_text, 0x11, doc230 },
 
 };
 
