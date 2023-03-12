@@ -1803,7 +1803,7 @@ inline int SDread () {
 #endif
 
 WiFiClient client;
-WiFiServer server(80);
+WiFiServer server(8080);
 
 
 inline int WiFiread () {
