@@ -37,6 +37,11 @@ That will display the message in red on the NeoPixel. The font is a basic 3x5
 character set: just uppercase, lowercase, numbers, "!" and ".". The text does
 wrap, but not very prettily.
 
+As an example of signpost's use, [onair](./bin/onair) is a shell script for a
+Linux PC that will constantly check if a local program, such as Zoom or a web
+browser, is accessing any attached cameras, and if so, will tell a signpost on
+the local network to remotely display "ON AIR" in cheery LED letters.
+
 ## Lisp repl over serial or telnet
 
 The ESP32 can also be controlled from the serial port, or by telnetting into port
@@ -47,8 +52,9 @@ There are currently two additions to the standard ulisp library:
 - (led-text string)
     Output a string in cylon red, to the Neopixel display.
 - (with-led () body)
-    By default, ulisps' graphic extensions are output on the T-Display's built-in tft screen.
-    Within the with-led special form, ulisp GFX extensions instead write to the Neopixel display.
+    By default, ulisps' graphic extensions are output on the T-Display's
+    built-in TFT screen. Within the with-led special form, ulisp GFX extensions
+    instead write to the Neopixel display.
 
 ## More power than you can safely use
 

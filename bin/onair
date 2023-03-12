@@ -1,0 +1,12 @@
+#!/bin/sh
+while (true;)
+do
+    if fuser -s /dev/video*;
+    then
+        TEXT=" ON AIR"
+    else
+        TEXT=""
+    fi
+    curl -d text="$TEXT" 'http://signpost.local/screen/' &> /dev/null
+    sleep 5
+done
