@@ -6652,7 +6652,7 @@ void initwebserver() {
     webserver.on("/screen/", HTTP_POST, [](AsyncWebServerRequest *request) {
             int params = request->params();
             const char *output = "NOWAY";
-            if (request->hasParam("text")) {
+            if (request->hasParam("text", true)) {
                 AsyncWebParameter* p = request->getParam("text", true);
                 output = p->value().c_str();
                 } else {
