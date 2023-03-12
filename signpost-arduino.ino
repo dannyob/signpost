@@ -13,7 +13,7 @@
    SIGNPOST STUFF
 */
 
-#define GREETING "SIGNPOST V3.1UL"
+#define GREETING "SIGNPOST V3.2µL"
 #include "secret.h"             // WiFi SSD and passwords:
                                 // const char* secret_ssid_name,
                                 // const char* secret_ssid_password,
@@ -6114,6 +6114,7 @@ uint8_t telnetConnected() {
 void inittelnet() {
   Serial.print("Telnet server beginning: ");
   telnetServer.begin();
+  MDNS.addService("telnet", "tcp", 1958);
 }
 
 void ulisp_setup() {
@@ -6631,6 +6632,55 @@ void display_text(const char *s)
   strip.Show();
 }
 
+/* SIGNPOST WEBSERVER
+*/
+
+AsyncWebServer webserver(80);
+
+const char *webform = 
+"<html><head><meta charset=utf-8></head>"
+"<body"
+"<h1>" GREETING "</h1>"
+"<form action=/screen/><label for=text>Enter text:</label><input type=text id=text name=text><br></form>"
+"</body></html>";
+
+void initwebserver() {
+    webserver.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+            request->send(200, "text/html", webform);
+            });
+
+    webserver.on("/screen/", HTTP_POST, [](AsyncWebServerRequest *request) {
+            int params = request->params();
+            const char *output = "NOWAY";
+            if (request->hasParam("text")) {
+                AsyncWebParameter* p = request->getParam("text", true);
+                output = p->value().c_str();
+                } else {
+                request->send(400, "text/plain", "No text defined.");
+                }
+            display_text(output);
+            request->send(200, "text/plain", output);
+    });
+
+    webserver.on("/screen/", HTTP_GET, [](AsyncWebServerRequest *request) {
+            int params = request->params();
+            const char *output = "NOWAY";
+            if (request->hasParam("text")) {
+                AsyncWebParameter* p = request->getParam("text");
+                output = p->value().c_str();
+                } else {
+                request->send(400, "text/plain", "No text defined.");
+                }
+            display_text(output);
+            request->send(200, "text/plain", output);
+    });
+
+    AsyncElegantOTA.begin(&webserver, secret_otausername, secret_otapassword);    // Start ElegantOTA. Secrets are in secret.h
+    webserver.begin();
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("HTTP server started");
+}
+
 /*
    SIGNPOST STARTUP
 */
@@ -6656,6 +6706,16 @@ void setup() {
   }
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
+  if (!MDNS.begin("signpost")) {
+      Serial.println("Error setting up MDNS responder!");
+      while(1) {
+          delay(1000);
+      }
+  }
+  Serial.println("mDNS responder started");
+
+  initwebserver();
 
   // Greet the serial port
   Serial.println(GREETING);
