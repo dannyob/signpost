@@ -1,18 +1,31 @@
-/* uLisp ESP Version 4.3b - www.ulisp.com
+/* SIGNPOST
+   Signpost glue cSode
+   (C) Danny O'Brien - danny@spesh.com
 
-   David Johnson-Davies - www.technoblogy.com - 8th March 2023
+   uLisp ESP Version 4.3b - www.ulisp.com
+   (C) David Johnson-Davies - www.technoblogy.com - 8th March 2023
 
-   Licensed under the MIT license: https://opensource.org/licenses/MIT
+   All code licensed under the MIT license: https://opensource.org/licenses/MIT
+
 */
 
 /*
    SIGNPOST STUFF
 */
 
-#define GREETING "SIGNPOST V2.2UL"
-#include <NeoPixelBus.h>
-#include "secret.h" // WiFi SSD and passwords:
-#include <Adafruit_GFX.h>    // Core graphics library
+#define GREETING "SIGNPOST V3.1UL"
+#include "secret.h"             // WiFi SSD and passwords:
+                                // const char* secret_ssid_name,
+                                // const char* secret_ssid_password,
+                                // const char* secret_otausername,
+                                // const char* secret_otapassword
+
+
+#include <Adafruit_GFX.h>       // Core graphics library
+#include <NeoPixelBus.h>        // NeoPixel support.
+#include <ESPmDNS.h>            // We advertise as 'signpost.local'
+#include <ESPAsyncWebSrv.h>     // Running a webserver for REST API
+#include <AsyncElegantOTA.h>    // ... and OTA.
 
 const uint16_t PixelCount = 512; // make sure to set this to the number of pixels in your strip
 const uint8_t PixelPin = 17;  // make sure to set this to the correct pin, ignored for Esp8266
@@ -318,7 +331,7 @@ DIGITALWRITE, ANALOGREAD, ANALOGREADRESOLUTION, ANALOGWRITE, DELAY, MILLIS, SLEE
 PPRINT, PPRINTALL, FORMAT, REQUIRE, LISTLIBRARY, DOCUMENTATION, AVAILABLE, WIFISERVER, WIFISOFTAP,
 CONNECTED, WIFILOCALIP, WIFICONNECT, DRAWPIXEL, DRAWLINE, DRAWRECT, FILLRECT, DRAWCIRCLE, FILLCIRCLE,
 DRAWROUNDRECT, FILLROUNDRECT, DRAWTRIANGLE, FILLTRIANGLE, DRAWCHAR, SETCURSOR, SETTEXTCOLOR, SETTEXTSIZE,
-SETTEXTWRAP, FILLSCREEN, SETROTATION, INVERTDISPLAY, KEYWORDS, 
+SETTEXTWRAP, FILLSCREEN, SETROTATION, INVERTDISPLAY, KEYWORDS,
 K_LED_BUILTIN, K_HIGH, K_LOW,
 #if defined(ESP8266)
 K_INPUT, K_INPUT_PULLUP, K_OUTPUT,
@@ -1993,7 +2006,7 @@ void superprint (object *form, int lm, pfun_t pfun) {
 
 const int ppspecials = 21;
 const char ppspecial[ppspecials] PROGMEM =
-  { DOTIMES, DOLIST, IF, SETQ, TEE, LET, LETSTAR, LAMBDA, WHEN, UNLESS, WITHI2C, WITHSERIAL, WITHSPI, WITHSDCARD, FORMILLIS, 
+  { DOTIMES, DOLIST, IF, SETQ, TEE, LET, LETSTAR, LAMBDA, WHEN, UNLESS, WITHI2C, WITHSERIAL, WITHSPI, WITHSDCARD, FORMILLIS,
     WITHOUTPUTTOSTRING,  DEFVAR, CASE, WITHGFX, WITHCLIENT, WITHLED };
 
 void supersub (object *form, int lm, int super, pfun_t pfun) {
@@ -2004,7 +2017,7 @@ void supersub (object *form, int lm, int super, pfun_t pfun) {
     if (sname == sym(DEFUN)) special = 2;
     else for (int i=0; i<ppspecials; i++) {
       if (sname == sym((builtin_t)pgm_read_byte(&ppspecial[i]))) { special = 1; break; }
-    } 
+    }
   }
   while (form != NULL) {
     if (atom(form)) { pfstring(PSTR(" . "), pfun); printobject(form, pfun); pfun(')'); return; }
@@ -6244,7 +6257,7 @@ const chlist indexer[] = {
 
 const uint8_t font_images[] = {
   3, 8,
-  
+
   // #65 Letter 'A'.
   0x1F,  // ░░░▓▓▓▓▓
   0x05,  // ░░░░░▓░▓
@@ -6634,16 +6647,13 @@ void setup() {
 
   // Begin Wifi
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
+  WiFi.begin(secret_ssid_name, secret_ssid_password); // Secrets should be in secret.h
   Serial.println("");
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
   }
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
