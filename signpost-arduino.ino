@@ -338,7 +338,7 @@ K_INPUT, K_INPUT_PULLUP, K_OUTPUT,
 #elif defined(ESP32)
 K_INPUT, K_INPUT_PULLUP, K_INPUT_PULLDOWN, K_OUTPUT,
 #endif
-USERFUNCTIONS, LEDTEXT, ENDFUNCTIONS, SET_SIZE = INT_MAX };
+USERFUNCTIONS, LEDTEXT, LEDGETPIXEL, ENDFUNCTIONS, SET_SIZE = INT_MAX };
 
 // Global variables
 
@@ -4340,6 +4340,17 @@ object *fn_led_text (object *args, object *env) {
   return nil;
 }
 
+object *fn_led_getpixel (object *args, object *env) {
+  (void) env;
+  RgbColor pixel;
+  Rgb16Color result;
+  int x = checkinteger(LEDGETPIXEL, car(args));
+  int y = checkinteger(LEDGETPIXEL, second(args));
+  pixel = strip.GetPixelColor(topo.Map(x, y));
+  result = Rgb16Color(pixel.R,pixel.G,pixel.B);
+  return number(result.Color565);
+}
+
 object *sp_with_led (object *args, object *env) {
 #if defined(gfxsupport)
   pfstring(PSTR("running with LED"), pserial);
@@ -4602,6 +4613,7 @@ const char string229[] PROGMEM = "";
 // Insert your own function names here
 const char string230[] PROGMEM = "led-text";
 const char string231[] PROGMEM = "with-led";
+const char string232[] PROGMEM = "led-getpixel";
 
 // Documentation strings
 const char doc0[] PROGMEM = "nil\n"
@@ -5110,7 +5122,9 @@ const char doc220[] PROGMEM = "(invert-display boolean)\n"
 const char doc230[] PROGMEM = "(led-text string)\n"
 "Writes string to the NeoPixel LED matrix.";
 const char doc231[] PROGMEM = "(with-led (options) form)\n"
-"Write gfx to the NeoPixel LED matrix";
+"Write gfx to the NeoPixel LED matrix.";
+const char doc232[] PROGMEM = "(led-getpixel x y)\n"
+"Read out color value, encoded in Rgb565.";
 
 
 // Built-in symbol lookup table
@@ -5356,6 +5370,7 @@ const tbl_entry_t lookup_table[] PROGMEM = {
 
 // Insert your own table entries here
   { string230, fn_led_text, 0x11, doc230 },
+  { string232, fn_led_getpixel, 0x22, doc232 },
 
 };
 

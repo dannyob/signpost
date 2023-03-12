@@ -51,6 +51,10 @@ There are currently two additions to the standard ulisp library:
 
 - (led-text string)
     Output a string in cylon red, to the Neopixel display.
+
+- (led-getpixel x y)
+    Return RGB565 integer value of Neopixel at (x,y).
+
 - (with-led () body)
     By default, ulisps' graphic extensions are output on the T-Display's
     built-in TFT screen. Within the with-led special form, ulisp GFX extensions
