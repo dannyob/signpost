@@ -1,10 +1,60 @@
 /* uLisp ESP Version 4.3b - www.ulisp.com
+
    David Johnson-Davies - www.technoblogy.com - 8th March 2023
 
    Licensed under the MIT license: https://opensource.org/licenses/MIT
 */
 
-#define GREETING "SIGNPOST V2.1ADUL"
+/*
+   SIGNPOST STUFF
+*/
+
+#define GREETING "SIGNPOST V2.2UL"
+#include <NeoPixelBus.h>
+#include "secret.h" // WiFi SSD and passwords:
+#include <Adafruit_GFX.h>    // Core graphics library
+
+const uint16_t PixelCount = 512; // make sure to set this to the number of pixels in your strip
+const uint8_t PixelPin = 17;  // make sure to set this to the correct pin, ignored for Esp8266
+const RgbColor DarkNight(HtmlColor(0x000000));
+const RgbColor CylonEyeColor(HtmlColor(0x0f0000));
+const RgbColor DimCylon(HtmlColor(0x080000));
+const RgbColor LovelySky(HtmlColor(0x00000f));
+const RgbColor FreshGrass(HtmlColor(0x000f00));
+
+const uint8_t PanelWidth = 32;
+const uint8_t PanelHeight = 8;
+
+// Define NeoPixel matrix
+
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
+NeoMosaic<ColumnMajorAlternatingLayout> topo(PanelWidth, PanelHeight, 1, 2);
+
+// Subclass Ada GFX so that we have basic graphics support for the NeoPixel
+class GFXNeoPixel : public Adafruit_GFX {
+public:
+    GFXNeoPixel(uint16_t width, uint16_t height);
+
+    void drawPixel(int16_t x, int16_t y, uint16_t color);
+};
+
+GFXNeoPixel::GFXNeoPixel(uint16_t width, uint16_t height): Adafruit_GFX(width, height) {};
+
+void GFXNeoPixel::drawPixel(int16_t x, int16_t y, uint16_t color) {
+    uint8_t r,g,b;
+
+    r = ((color >> 11) & 0x1F) * 8;
+    g = ((color >> 5) & 0x3F) * 4;
+    b = ((color & 0x1F) * 8);
+
+    strip.SetPixelColor(topo.Map(x, y), RgbColor(r, g, b));
+}
+
+GFXNeoPixel led_gfx = GFXNeoPixel(32, 16);
+
+/*
+   LISP LAND
+*/
 
 // Lisp Library
 const char LispLibrary[] PROGMEM = "(with-gfx (str) (princ \"" GREETING "\" str))";
@@ -37,8 +87,8 @@ const char LispLibrary[] PROGMEM = "(with-gfx (str) (princ \"" GREETING "\" str)
 #if defined(gfxsupport)
 #define COLOR_WHITE ST77XX_WHITE
 #define COLOR_BLACK ST77XX_BLACK
-#include <Adafruit_GFX.h>    // Core graphics library
 #include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+
 #if defined(ARDUINO_ESP32_DEV)
 Adafruit_ST7789 tft_gfx  = Adafruit_ST7789(5, 16, 19, 18);
 #define TFT_BACKLITE 4
@@ -46,7 +96,6 @@ Adafruit_ST7789 tft_gfx  = Adafruit_ST7789(5, 16, 19, 18);
 Adafruit_ST7789 tft_gfx = Adafruit_ST7789(TFT_CS, TFT_DC, MOSI, SCK, TFT_RST);
 #endif
 Adafruit_GFX *tft = &tft_gfx;
-GFXcanvas16 led_gfx = GFXcanvas16(32,32);
 #endif
 
 #if defined(sdcardsupport)
@@ -156,18 +205,9 @@ GFXcanvas16 led_gfx = GFXcanvas16(32,32);
 #error "Board not supported!"
 #endif
 
-
-// SIGNPOST LIBRARIES
-
-#include <NeoPixelBus.h>
-#include "secret.h"
-
-
 // Telnet Repl
 WiFiServer telnetServer(1958, 1);
 WiFiClient telnetClient;
-
-
 
 // C Macros
 
@@ -263,7 +303,7 @@ typedef void (*pfun_t)(char);
 enum builtin_t { NIL, TEE, NOTHING, OPTIONAL, INITIALELEMENT, ELEMENTTYPE, BIT, AMPREST, LAMBDA, LET,
 LETSTAR, CLOSURE, PSTAR, SPECIAL_FORMS, QUOTE, OR, DEFUN, DEFVAR, SETQ, LOOP, RETURN, PUSH, POP, INCF,
 DECF, SETF, DOLIST, DOTIMES, TRACE, UNTRACE, FORMILLIS, TIME, WITHOUTPUTTOSTRING, WITHSERIAL, WITHI2C,
-WITHSPI, WITHSDCARD, WITHGFX, WITHCLIENT, TAIL_FORMS, PROGN, IF, COND, WHEN, UNLESS, CASE, AND, HELP,
+WITHSPI, WITHSDCARD, WITHGFX, WITHCLIENT, WITHLED, TAIL_FORMS, PROGN, IF, COND, WHEN, UNLESS, CASE, AND, HELP,
 FUNCTIONS, NOT, NULLFN, CONS, ATOM, LISTP, CONSP, SYMBOLP, ARRAYP, BOUNDP, SETFN, STREAMP, EQ, CAR, FIRST,
 CDR, REST, CAAR, CADR, SECOND, CDAR, CDDR, CAAAR, CAADR, CADAR, CADDR, THIRD, CDAAR, CDADR, CDDAR, CDDDR,
 LENGTH, ARRAYDIMENSIONS, LIST, MAKEARRAY, REVERSE, NTH, AREF, ASSOC, MEMBER, APPLY, FUNCALL, APPEND, MAPC,
@@ -285,7 +325,7 @@ K_INPUT, K_INPUT_PULLUP, K_OUTPUT,
 #elif defined(ESP32)
 K_INPUT, K_INPUT_PULLUP, K_INPUT_PULLDOWN, K_OUTPUT,
 #endif
-USERFUNCTIONS, LEDTEXT, WITHLED, ENDFUNCTIONS, SET_SIZE = INT_MAX };
+USERFUNCTIONS, LEDTEXT, ENDFUNCTIONS, SET_SIZE = INT_MAX };
 
 // Global variables
 
@@ -4289,14 +4329,19 @@ object *fn_led_text (object *args, object *env) {
 
 object *sp_with_led (object *args, object *env) {
 #if defined(gfxsupport)
-  object *forms = first(args);
+  pfstring(PSTR("running with LED"), pserial);
+  object *params = first(args);
+  object *var = first(params);
+  object *forms = cdr(args);
   tft = &led_gfx;
   object *result = eval(tf_progn(forms,env), env);
   tft = &tft_gfx;
+  pfstring(PSTR("showing LED"), pserial);
+  strip.Show();
   return result;
 #else
   (void) args, (void) env;
-  error2(WITHGFX, PSTR("not supported"));
+  error2(WITHLED, PSTR("not supported"));
   return nil;
 #endif
 }
@@ -5051,7 +5096,7 @@ const char doc220[] PROGMEM = "(invert-display boolean)\n"
 // Insert your own function documentation here
 const char doc230[] PROGMEM = "(led-text string)\n"
 "Writes string to the NeoPixel LED matrix.";
-const char doc231[] PROGMEM = "(with-led form)\n"
+const char doc231[] PROGMEM = "(with-led (options) form)\n"
 "Write gfx to the NeoPixel LED matrix";
 
 
@@ -5096,6 +5141,7 @@ const tbl_entry_t lookup_table[] PROGMEM = {
   { string36, sp_withsdcard, 0x2F, doc36 },
   { string37, sp_withgfx, 0x1F, doc37 },
   { string38, sp_withclient, 0x12, doc38 },
+  { string231, sp_with_led, 0x1F, doc231 },
   { string39, NULL, 0x00, NULL },
   { string40, tf_progn, 0x0F, doc40 },
   { string41, tf_if, 0x23, doc41 },
@@ -5297,7 +5343,6 @@ const tbl_entry_t lookup_table[] PROGMEM = {
 
 // Insert your own table entries here
   { string230, fn_led_text, 0x11, doc230 },
-  { string231, sp_with_led, 0x11, doc231 },
 
 };
 
@@ -6047,6 +6092,7 @@ uint8_t telnetConnected() {
     } else {
       Serial.println("Connection accepted");
       telnetClient = telnetServer.available();
+      telnetClient.write("Welcome to the Alamanack Matrix! Happy Hacking!\n");
     }
   }
   return telnetClient.connected();
@@ -6118,6 +6164,10 @@ void loop () {
   client.stop();
   repl(NULL);
 }
+
+/*
+   NEOPIXEL TEXT SUPPORT
+*/
 
 struct chlist {
   char letter;
@@ -6518,27 +6568,6 @@ const uint8_t font_images[] = {
 };
 
 
-
-const uint16_t PixelCount = 512; // make sure to set this to the number of pixels in your strip
-const uint8_t PixelPin = 17;  // make sure to set this to the correct pin, ignored for Esp8266
-const RgbColor DarkNight(HtmlColor(0x000000));
-const RgbColor CylonEyeColor(HtmlColor(0x0f0000));
-const RgbColor DimCylon(HtmlColor(0x080000));
-const RgbColor LovelySky(HtmlColor(0x00000f));
-const RgbColor FreshGrass(HtmlColor(0x000f00));
-
-const uint8_t PanelWidth = 32;
-const uint8_t PanelHeight = 8;
-
-// NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
-// for esp8266 omit the pin
-NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
-
-// NeoTopology<ColumnMajorAlternatingLayout> topo(PanelWidth, PanelHeight);
-// NeoTopology<ColumnMajorAlternatingLayout> topo(PanelWidth / 2, PanelHeight);
-NeoMosaic<ColumnMajorAlternatingLayout> topo(PanelWidth, PanelHeight, 1, 2);
- 
-
 uint8_t fontIndex(char ch) {
   const chlist *ptr = indexer;
   while ((*ptr).letter) {
@@ -6589,16 +6618,28 @@ void display_text(const char *s)
   strip.Show();
 }
 
+/*
+   SIGNPOST STARTUP
+*/
 
 void setup() {
-  Serial.begin(115200);
+
+  Serial.begin(921600);
+
+  // Early boot message
+  strip.Begin();
+  strip.ClearTo(DarkNight, 1, PixelCount - 1);
+  display_text(GREETING);
+  strip.Show();
+
+  // Begin Wifi
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.println("");
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+      delay(500);
+      Serial.print(".");
   }
   Serial.println("");
   Serial.print("Connected to ");
@@ -6606,13 +6647,11 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  // Strip starts!
-  strip.Begin();
-  strip.ClearTo(DarkNight, 1, PixelCount - 1);
-  display_text(GREETING);
-  strip.Show();
+  // Greet the serial port
   Serial.println(GREETING);
 
   // ulisp starts!
   ulisp_setup();
+  strip.ClearTo(DarkNight, 1, PixelCount - 1);
+  strip.Show();
 }
