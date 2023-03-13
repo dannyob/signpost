@@ -1,0 +1,2 @@
+#!/bin/sh
+curl -d text="$*" 'http://signpost.local/screen/' > /dev/null 2>&1

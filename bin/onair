@@ -3,10 +3,13 @@ while (true;)
 do
     if fuser -s /dev/video*;
     then
-        TEXT=" ON AIR"
+        while fuser -s /dev/video*
+        do
+            curl -d text=" ON AIR" 'http://signpost.local/screen/' > /dev/null 2>&1
+            sleep 5
+        done
+            curl -d text="" 'http://signpost.local/screen/' > /dev/null 2>&1
     else
-        TEXT=""
+        sleep 5
     fi
-    curl -d text="$TEXT" 'http://signpost.local/screen/' &> /dev/null
-    sleep 5
 done
