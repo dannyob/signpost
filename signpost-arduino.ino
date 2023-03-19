@@ -4365,7 +4365,6 @@ object *sp_withled (object *args, object *env) {
 #endif
 }
 
-
 // Built-in symbol names
 const char string0[] PROGMEM = "nil";
 const char string1[] PROGMEM = "t";
@@ -6115,7 +6114,8 @@ uint8_t telnetConnected() {
     } else {
       Serial.println("Connection accepted");
       telnetClient = telnetServer.available();
-      telnetClient.write("Welcome to the Alamanack Matrix! Happy Hacking!\n");
+      telnetClient.write("Welcome to the Almanack Matrix! Happy Hacking!\n");
+      telnetClient.write("> ");
     }
   }
   return telnetClient.connected();
