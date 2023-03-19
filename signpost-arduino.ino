@@ -54,13 +54,7 @@ public:
 GFXNeoPixel::GFXNeoPixel(uint16_t width, uint16_t height): Adafruit_GFX(width, height) {};
 
 void GFXNeoPixel::drawPixel(int16_t x, int16_t y, uint16_t color) {
-    uint8_t r,g,b;
-
-    r = ((color >> 11) & 0x1F) * 8;
-    g = ((color >> 5) & 0x3F) * 4;
-    b = ((color & 0x1F) * 8);
-
-    strip.SetPixelColor(topo.Map(x, y), RgbColor(r, g, b));
+    strip.SetPixelColor(topo.Map(x, y), Rgb16Color(color));
 }
 
 GFXNeoPixel led_gfx = GFXNeoPixel(32, 16);
