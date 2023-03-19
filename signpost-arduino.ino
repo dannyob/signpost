@@ -13,7 +13,7 @@
    SIGNPOST STUFF
 */
 
-#define GREETING "SIGNPOST V3.2µL"
+#define GREETING "SIGNPOST V3.5µL"
 #include "secret.h"             // WiFi SSD and passwords:
                                 // const char* secret_ssid_name,
                                 // const char* secret_ssid_password,
@@ -62,6 +62,7 @@ GFXNeoPixel led_gfx = GFXNeoPixel(32, 16);
 /*
    LISP LAND
 */
+
 
 // Lisp Library
 const char LispLibrary[] PROGMEM = "(with-gfx (str) (princ \"" GREETING "\" str))";
@@ -4345,16 +4346,16 @@ object *fn_led_getpixel (object *args, object *env) {
   return number(result.Color565);
 }
 
-object *sp_with_led (object *args, object *env) {
+object *sp_withled (object *args, object *env) {
 #if defined(gfxsupport)
-  pfstring(PSTR("running with LED"), pserial);
   object *params = first(args);
   object *var = first(params);
+  object *pair = cons(var, stream(GFXSTREAM, 1));
+  push(pair,env);
   object *forms = cdr(args);
   tft = &led_gfx;
   object *result = eval(tf_progn(forms,env), env);
   tft = &tft_gfx;
-  pfstring(PSTR("showing LED"), pserial);
   strip.Show();
   return result;
 #else
@@ -5162,7 +5163,7 @@ const tbl_entry_t lookup_table[] PROGMEM = {
   { string36, sp_withsdcard, 0x2F, doc36 },
   { string37, sp_withgfx, 0x1F, doc37 },
   { string38, sp_withclient, 0x12, doc38 },
-  { string231, sp_with_led, 0x1F, doc231 },
+  { string231, sp_withled, 0x1F, doc231 },
   { string39, NULL, 0x00, NULL },
   { string40, tf_progn, 0x0F, doc40 },
   { string41, tf_if, 0x23, doc41 },
