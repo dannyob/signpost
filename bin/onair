@@ -1,14 +1,23 @@
 #!/bin/sh
-while (true;)
-do
-    if fuser -s /dev/video*;
-    then
-        while fuser -s /dev/video*
-        do
-            curl -d text=" ON AIR" 'http://signpost.local/screen/' > /dev/null 2>&1
+
+# Check for the existence of the /dev/video* device(s)
+video_devices() {
+    ls /dev/video* 2>/dev/null
+}
+
+# Main loop
+while true; do
+    if video_devices | xargs fuser -s; then
+        # If any /dev/video* device is in use, send "ON AIR" message
+        curl -d text=" ON AIR" 'http://signpost.local/screen/' >/dev/null 2>&1
+
+        # Wait until all /dev/video* devices are no longer in use
+        while video_devices | xargs fuser -s; do
             sleep 5
         done
-            curl -d text="" 'http://signpost.local/screen/' > /dev/null 2>&1
+
+        # Clear the "ON AIR" message
+        curl -d text="" 'http://signpost.local/screen/' >/dev/null 2>&1
     else
         sleep 5
     fi

@@ -1,2 +1,16 @@
 #!/bin/sh
-curl -d text="$*" 'http://signpost.local/screen/' > /dev/null 2>&1
+
+# Check if arguments are provided
+if [ -z "$*" ]; then
+    echo "Usage: $(basename "$0") <text>"
+    exit 1
+fi
+
+url='http://signpost.local/screen/'
+response=$(curl -s -o /dev/null -w '%{http_code}' -d text="$*" "$url")
+
+# Check if the request was successful
+if [ "$response" -ne 200 ]; then
+    echo "An error occurred while sending the text. HTTP status code: $response"
+    exit 1
+fi
